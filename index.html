@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reproductor de URLs</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="container">
+    <header id="pageHeader">
+      <h1>🎬 Reproductor</h1>
+      <p class="subtitle" id="pageSubtitle">Sube tus videos, imágenes y enlaces — se reproducen en orden y puedes compartir solo el reproductor con un link</p>
+    </header>
+
+    <!-- ===== REPRODUCTOR PRINCIPAL ===== -->
+    <section class="player-card">
+      <div id="playerStage" class="player-stage">
+        <div id="playerMedia" class="player-media">
+          <div class="player-placeholder">
+            <span class="thumb-icon">🎞️</span>
+            <p>Agrega una URL abajo para empezar a reproducir</p>
+          </div>
+        </div>
+        <button id="stageShareBtn" class="stage-share-btn hidden" title="Compartir enlace del reproductor">🔗</button>
+      </div>
+
+      <div class="player-overlay-bar">
+        <div class="player-overlay-text">
+          <p id="playerTitle" class="player-title">—</p>
+          <span id="playerTag" class="player-tag-inline"></span>
+        </div>
+        <span id="playerCounter" class="player-counter">0 / 0</span>
+      </div>
+
+      <div class="player-controls">
+        <button id="prevBtn" class="icon-btn" title="Anterior">⏮</button>
+        <button id="playPauseBtn" class="icon-btn icon-btn-main" title="Reproducir / Pausar">▶</button>
+        <button id="nextBtn" class="icon-btn" title="Siguiente">⏭</button>
+
+        <div class="dots" id="dotsRow"></div>
+
+        <label class="autoplay-label">
+          <input type="checkbox" id="autoplayCheck" checked />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          Avance automático
+        </label>
+        <button id="fullscreenBtn" class="icon-btn" title="Pantalla completa">⛶</button>
+      </div>
+
+      <!-- Tira de miniaturas: solo visible en modo "solo reproductor" (link compartido) -->
+      <div id="filmstrip" class="filmstrip hidden"></div>
+    </section>
+
+    <!-- ===== COMPARTIR ===== -->
+    <section class="share-card manage-section">
+      <button id="shareBtn" class="btn btn-primary">🔗 Obtener link del reproductor</button>
+      <div id="shareResult" class="share-result hidden">
+        <input type="text" id="shareLink" readonly />
+        <button id="copyLinkBtn" class="btn btn-outline btn-small">📋 Copiar</button>
+      </div>
+      <p class="share-hint">El link abre solo el reproductor (sin el panel de edición) con tu playlist cargada — ideal para enviarlo a alguien que solo quiere ver el contenido.</p>
+    </section>
+
+    <!-- ===== AGREGAR / GESTIONAR ===== -->
+    <form id="urlForm" class="url-form manage-section">
+      <input type="hidden" id="editId" value="" />
+      <div class="field">
+        <label for="urlName">Nombre / Descripción</label>
+        <input type="text" id="urlName" placeholder="Ej: tv_Show video" required />
+      </div>
+      <div class="field">
+        <label for="urlValue">URL</label>
+        <input type="url" id="urlValue" placeholder="https://www.dropbox.com/scl/fi/.../archivo?dl=1" required />
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <label for="urlType">Tipo</label>
+          <select id="urlType">
+            <option value="auto">Detectar automáticamente</option>
+            <option value="video">🎬 Video</option>
+            <option value="image">🖼️ Imagen</option>
+            <option value="other">📄 Otro</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="urlTag">Categoría (opcional)</label>
+          <input type="text" id="urlTag" placeholder="Ej: promos, familia..." />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" id="submitBtn" class="btn btn-primary">➕ Agregar a la playlist</button>
+        <button type="button" id="cancelEditBtn" class="btn btn-secondary hidden">Cancelar edición</button>
+      </div>
+    </form>
+
+    <div class="toolbar manage-section">
+      <input type="text" id="searchInput" placeholder="🔍 Buscar por nombre, URL o categoría..." />
+      <button id="exportBtn" class="btn btn-outline">⬇️ Exportar</button>
+      <label class="btn btn-outline import-label">
+        ⬆️ Importar
+        <input type="file" id="importInput" accept="application/json" hidden />
+      </label>
+    </div>
+
+    <div class="filter-bar manage-section">
+      <button class="filter-chip active" data-filter="all">Todos <span id="countAll">0</span></button>
+      <button class="filter-chip" data-filter="video">🎬 Videos <span id="countVideo">0</span></button>
+      <button class="filter-chip" data-filter="image">🖼️ Imágenes <span id="countImage">0</span></button>
+      <button class="filter-chip" data-filter="other">📄 Otros <span id="countOther">0</span></button>
+    </div>
+
+    <div id="emptyState" class="empty-state hidden manage-section">
+      <p>No tienes URLs guardadas todavía. Agrega la primera arriba. 👆</p>
+    </div>
+
+    <ul id="urlList" class="url-list manage-section"></ul>
+
+    <p id="playerOnlyFooter" class="player-only-footer hidden">Reproductor generado con Gestor de URLs</p>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
