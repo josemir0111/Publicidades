@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reproductor de URLs</title>
+<style>
+:root {
+  --bg: #0a0b10;
+  --card: #14161f;
+  --card-hover: #1b1e29;
+  --border: #262a38;
+  --text: #eceef4;
+  --text-dim: #8d93a6;
+  --primary: #7c6ff2;
+  --primary-hover: #8f83ff;
+  --accent: #ffb454;
+  --danger: #ff5c72;
+  --danger-hover: #ff7386;
+  --radius: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(124,111,242,0.12), transparent 45%),
+    radial-gradient(circle at 85% 100%, rgba(255,180,84,0.06), transparent 45%),
+    var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 32px 16px 80px;
+}
+
+.container { max-width: 820px; margin: 0 auto; }
+
+header { text-align: center; margin-bottom: 26px; }
+header h1 { margin: 0 0 6px; font-size: 1.9rem; letter-spacing: -0.01em; }
+.subtitle { color: var(--text-dim); margin: 0; font-size: 0.92rem; }
+
+/* ===== Reproductor principal (rediseñado) ===== */
+.player-card {
+  background: linear-gradient(180deg, #171a25 0%, #12141d 100%);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 14px;
+  margin-bottom: 20px;
+  box-shadow: 0 20px 60px -20px rgba(0,0,0,0.6);
+}
+
+.player-stage {
+  background: #000;
+  border-radius: 14px;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+.player-stage video,
+.player-stage img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  animation: fadeIn 0.35s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.player-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-dim);
+  padding: 20px;
+  text-align: center;
+}
+.player-placeholder .thumb-icon { font-size: 2.6rem; opacity: 0.6; }
+
+.player-other {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: var(--text-dim);
+  font-size: 3.2rem;
+  text-align: center;
+  padding: 20px;
+}
+.player-other a {
+  color: var(--accent);
+  font-size: 0.85rem;
+  word-break: break-all;
+  border: 1px solid rgba(255,180,84,0.4);
+  padding: 6px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+}
+.player-other a:hover { background: rgba(255,180,84,0.1); }
+
+/* Barra superpuesta con título, estilo cine */
+.player-overlay-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 14px 6px 4px;
+}
+.player-overlay-text { min-width: 0; }
+.player-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.05rem;
+  word-break: break-word;
+  letter-spacing: -0.01em;
+}
+.player-tag-inline {
+  display: inline-block;
+  font-size: 0.68rem;
+  color: var(--accent);
+  background: rgba(255,180,84,0.12);
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-top: 4px;
+}
+.player-tag-inline:empty { display: none; }
+.player-counter {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  padding-bottom: 2px;
+}
+
+/* Controles estilo reproductor de medios */
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 6px 6px;
+}
+
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #1c1f2b;
+  color: var(--text);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.1s, border-color 0.15s;
+}
+.icon-btn:hover { background: var(--card-hover); border-color: var(--text-dim); }
+.icon-btn:active { transform: scale(0.93); }
+.icon-btn-main {
+  width: 46px;
+  height: 46px;
+  background: var(--primary);
+  border: none;
+  font-size: 1.1rem;
+}
+.icon-btn-main:hover { background: var(--primary-hover); }
+
+.dots {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex: 1;
+  overflow-x: auto;
+  padding: 4px 2px;
+  scrollbar-width: none;
+}
+.dots::-webkit-scrollbar { display: none; }
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.dot:hover { background: var(--text-dim); }
+.dot.active { background: var(--primary); transform: scale(1.3); }
+
+.autoplay-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.autoplay-label input { position: absolute; opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  width: 32px;
+  height: 18px;
+  background: var(--border);
+  border-radius: 999px;
+  position: relative;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 0.15s;
+}
+.autoplay-label input:checked + .toggle-track { background: var(--primary); }
+.autoplay-label input:checked + .toggle-track .toggle-thumb { transform: translateX(14px); }
+
+/* Filmstrip: tira de miniaturas para modo solo-reproductor */
+.filmstrip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 12px 4px 2px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.filmstrip::-webkit-scrollbar { height: 6px; }
+.filmstrip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+.filmstrip-item {
+  width: 100px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  position: relative;
+  background: #000;
+  opacity: 0.6;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+.filmstrip-item:hover { opacity: 0.9; }
+.filmstrip-item.active { opacity: 1; border-color: var(--primary); }
+.filmstrip-item img, .filmstrip-item video { width: 100%; height: 100%; object-fit: cover; }
+.filmstrip-item .thumb-icon { font-size: 1.3rem; color: var(--text-dim); display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+
+.player-only-footer {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  margin-top: 18px;
+}
+
+/* ===== Compartir ===== */
+.share-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.share-result { display: flex; gap: 8px; }
+.share-result input {
+  flex: 1;
+  background: #10131a;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-size: 0.82rem;
+}
+.share-hint { color: var(--text-dim); font-size: 0.78rem; margin: 0; }
+
+/* ===== Formulario ===== */
+.url-form {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 0.85rem; color: var(--text-dim); }
+input[type="text"], input[type="url"] {
+  background: #10131a; border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; color: var(--text); font-size: 0.95rem; outline: none; transition: border-color 0.15s;
+}
+input[type="text"]:focus, input[type="url"]:focus { border-color: var(--primary); }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 500px) { .row-2 { grid-template-columns: 1fr; } }
+select {
+  background: #10131a; border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; color: var(--text); font-size: 0.9rem; outline: none;
+}
+select:focus { border-color: var(--primary); }
+.form-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.btn {
+  border: none; border-radius: 8px; padding: 10px 16px; font-size: 0.9rem;
+  cursor: pointer; font-weight: 600; transition: transform 0.1s, background 0.15s, opacity 0.15s;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+.btn-secondary:hover { color: var(--text); border-color: var(--text-dim); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); display: inline-flex; align-items: center; gap: 6px; }
+.btn-outline:hover { background: var(--card-hover); }
+.btn-danger { background: var(--danger); color: white; }
+.btn-danger:hover { background: var(--danger-hover); }
+.btn-small { padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; }
+
+.toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.toolbar #searchInput {
+  flex: 1; min-width: 200px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px; color: var(--text); outline: none;
+}
+.toolbar #searchInput:focus { border-color: var(--primary); }
+.import-label { cursor: pointer; }
+
+.filter-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
+.filter-chip {
+  background: var(--card); border: 1px solid var(--border); color: var(--text-dim);
+  border-radius: 999px; padding: 7px 14px; font-size: 0.82rem; cursor: pointer; transition: all 0.15s;
+}
+.filter-chip:hover { color: var(--text); border-color: var(--text-dim); }
+.filter-chip.active { background: rgba(124,111,242,0.15); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+.filter-chip span { background: rgba(255,255,255,0.08); border-radius: 999px; padding: 1px 6px; font-size: 0.72rem; margin-left: 4px; }
+
+/* ===== Lista / playlist ===== */
+.url-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.url-item {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px; display: flex; justify-content: space-between; align-items: stretch;
+  gap: 12px; transition: background 0.15s, border-color 0.15s; cursor: pointer;
+}
+.url-item:hover { background: var(--card-hover); }
+.url-item.playing { border-color: var(--primary); background: rgba(124,111,242,0.08); }
+
+.url-item-inner { display: flex; gap: 12px; flex: 1; min-width: 0; align-items: center; }
+.url-thumb {
+  width: 88px; height: 60px; flex-shrink: 0; border-radius: 8px; overflow: hidden;
+  background: #0a0c11; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); position: relative;
+}
+.url-thumb img, .url-thumb video { width: 100%; height: 100%; object-fit: cover; }
+.url-thumb .thumb-icon { font-size: 1.6rem; color: var(--text-dim); }
+.url-thumb .play-badge {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.25); color: white; font-size: 1.2rem; pointer-events: none;
+}
+.type-badge {
+  display: inline-block; font-size: 0.68rem; color: var(--text-dim);
+  background: rgba(255,255,255,0.06); padding: 1px 7px; border-radius: 999px; margin-left: 6px;
+}
+.url-info { min-width: 0; flex: 1; }
+.url-name { font-weight: 600; margin: 0 0 2px; word-break: break-word; font-size: 0.92rem; }
+.url-tag {
+  display: inline-block; font-size: 0.7rem; color: var(--primary);
+  background: rgba(124,111,242,0.15); padding: 2px 8px; border-radius: 999px; margin-bottom: 4px;
+}
+.url-link { display: block; color: var(--text-dim); font-size: 0.78rem; text-decoration: none; word-break: break-all; }
+.url-link:hover { color: var(--primary); text-decoration: underline; }
+.url-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
+
+.empty-state {
+  text-align: center; color: var(--text-dim); padding: 40px 20px;
+  border: 1px dashed var(--border); border-radius: var(--radius);
+}
+
+.hidden { display: none !important; }
+
+/* ===== Modo "solo reproductor" (link compartido) ===== */
+body.player-only .manage-section { display: none !important; }
+body.player-only .container { max-width: 900px; }
+body.player-only .player-card { margin-bottom: 8px; }
+body.player-only header h1 { font-size: 1.5rem; }
+
+@media (max-width: 500px) {
+  .url-item { flex-direction: column; }
+  .url-actions { align-self: flex-end; }
+  .player-controls { justify-content: center; }
+  .dots { order: 3; width: 100%; justify-content: center; }
+}
+
+</style>
+</head>
+<body>
+
+  <div class="container">
+    <header id="pageHeader">
+      <h1>🎬 Reproductor</h1>
+      <p class="subtitle" id="pageSubtitle">Sube tus videos, imágenes y enlaces — se reproducen en orden y puedes compartir solo el reproductor con un link</p>
+    </header>
+
+    <!-- ===== REPRODUCTOR PRINCIPAL ===== -->
+    <section class="player-card">
+      <div id="playerStage" class="player-stage">
+        <div class="player-placeholder">
+          <span class="thumb-icon">🎞️</span>
+          <p>Agrega una URL abajo para empezar a reproducir</p>
+        </div>
+      </div>
+
+      <div class="player-overlay-bar">
+        <div class="player-overlay-text">
+          <p id="playerTitle" class="player-title">—</p>
+          <span id="playerTag" class="player-tag-inline"></span>
+        </div>
+        <span id="playerCounter" class="player-counter">0 / 0</span>
+      </div>
+
+      <div class="player-controls">
+        <button id="prevBtn" class="icon-btn" title="Anterior">⏮</button>
+        <button id="playPauseBtn" class="icon-btn icon-btn-main" title="Reproducir / Pausar">▶</button>
+        <button id="nextBtn" class="icon-btn" title="Siguiente">⏭</button>
+
+        <div class="dots" id="dotsRow"></div>
+
+        <label class="autoplay-label">
+          <input type="checkbox" id="autoplayCheck" checked />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          Avance automático
+        </label>
+        <button id="fullscreenBtn" class="icon-btn" title="Pantalla completa">⛶</button>
+      </div>
+
+      <!-- Tira de miniaturas: solo visible en modo "solo reproductor" (link compartido) -->
+      <div id="filmstrip" class="filmstrip hidden"></div>
+    </section>
+
+    <!-- ===== COMPARTIR ===== -->
+    <section class="share-card manage-section">
+      <button id="shareBtn" class="btn btn-primary">🔗 Obtener link del reproductor</button>
+      <div id="shareResult" class="share-result hidden">
+        <input type="text" id="shareLink" readonly />
+        <button id="copyLinkBtn" class="btn btn-outline btn-small">📋 Copiar</button>
+      </div>
+      <p class="share-hint">El link abre solo el reproductor (sin el panel de edición) con tu playlist cargada — ideal para enviarlo a alguien que solo quiere ver el contenido.</p>
+    </section>
+
+    <!-- ===== AGREGAR / GESTIONAR ===== -->
+    <form id="urlForm" class="url-form manage-section">
+      <input type="hidden" id="editId" value="" />
+      <div class="field">
+        <label for="urlName">Nombre / Descripción</label>
+        <input type="text" id="urlName" placeholder="Ej: tv_Show video" required />
+      </div>
+      <div class="field">
+        <label for="urlValue">URL</label>
+        <input type="url" id="urlValue" placeholder="https://www.dropbox.com/scl/fi/.../archivo?dl=1" required />
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <label for="urlType">Tipo</label>
+          <select id="urlType">
+            <option value="auto">Detectar automáticamente</option>
+            <option value="video">🎬 Video</option>
+            <option value="image">🖼️ Imagen</option>
+            <option value="other">📄 Otro</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="urlTag">Categoría (opcional)</label>
+          <input type="text" id="urlTag" placeholder="Ej: promos, familia..." />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" id="submitBtn" class="btn btn-primary">➕ Agregar a la playlist</button>
+        <button type="button" id="cancelEditBtn" class="btn btn-secondary hidden">Cancelar edición</button>
+      </div>
+    </form>
+
+    <div class="toolbar manage-section">
+      <input type="text" id="searchInput" placeholder="🔍 Buscar por nombre, URL o categoría..." />
+      <button id="exportBtn" class="btn btn-outline">⬇️ Exportar</button>
+      <label class="btn btn-outline import-label">
+        ⬆️ Importar
+        <input type="file" id="importInput" accept="application/json" hidden />
+      </label>
+    </div>
+
+    <div class="filter-bar manage-section">
+      <button class="filter-chip active" data-filter="all">Todos <span id="countAll">0</span></button>
+      <button class="filter-chip" data-filter="video">🎬 Videos <span id="countVideo">0</span></button>
+      <button class="filter-chip" data-filter="image">🖼️ Imágenes <span id="countImage">0</span></button>
+      <button class="filter-chip" data-filter="other">📄 Otros <span id="countOther">0</span></button>
+    </div>
+
+    <div id="emptyState" class="empty-state hidden manage-section">
+      <p>No tienes URLs guardadas todavía. Agrega la primera arriba. 👆</p>
+    </div>
+
+    <ul id="urlList" class="url-list manage-section"></ul>
+
+    <p id="playerOnlyFooter" class="player-only-footer hidden">Reproductor generado con Gestor de URLs</p>
+  </div>
+
+  <script>
+// ====== Reproductor de URLs ======
+// Almacenamiento local: localStorage. Compartir: SOLO el reproductor, playlist codificada en el link (?playlist=...&view=player)
+
+const STORAGE_KEY = "url_manager_items_v3";
+
+const form = document.getElementById("urlForm");
+const editIdInput = document.getElementById("editId");
+const nameInput = document.getElementById("urlName");
+const urlInput = document.getElementById("urlValue");
+const typeInput = document.getElementById("urlType");
+const tagInput = document.getElementById("urlTag");
+const submitBtn = document.getElementById("submitBtn");
+const cancelEditBtn = document.getElementById("cancelEditBtn");
+const listEl = document.getElementById("urlList");
+const emptyState = document.getElementById("emptyState");
+const searchInput = document.getElementById("searchInput");
+const exportBtn = document.getElementById("exportBtn");
+const importInput = document.getElementById("importInput");
+const filterChips = document.querySelectorAll(".filter-chip");
+const pageSubtitle = document.getElementById("pageSubtitle");
+const playerOnlyFooter = document.getElementById("playerOnlyFooter");
+
+// Reproductor
+const playerStage = document.getElementById("playerStage");
+const playerTitle = document.getElementById("playerTitle");
+const playerTag = document.getElementById("playerTag");
+const playerCounter = document.getElementById("playerCounter");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+const playPauseBtn = document.getElementById("playPauseBtn");
+const autoplayCheck = document.getElementById("autoplayCheck");
+const fullscreenBtn = document.getElementById("fullscreenBtn");
+const dotsRow = document.getElementById("dotsRow");
+const filmstrip = document.getElementById("filmstrip");
+
+// Compartir
+const shareBtn = document.getElementById("shareBtn");
+const shareResult = document.getElementById("shareResult");
+const shareLinkInput = document.getElementById("shareLink");
+const copyLinkBtn = document.getElementById("copyLinkBtn");
+
+const IS_PLAYER_ONLY = new URLSearchParams(window.location.search).get("view") === "player";
+
+let items = loadItemsFromUrlOrStorage();
+let currentFilter = "all";
+let currentIndex = 0;
+let isPlaying = false;
+let imageTimer = null;
+
+if (IS_PLAYER_ONLY) {
+  document.body.classList.add("player-only");
+  pageSubtitle.textContent = "Playlist compartida";
+  filmstrip.classList.remove("hidden");
+  playerOnlyFooter.classList.remove("hidden");
+}
+
+// ---------- Carga inicial: primero revisa si el link trae una playlist compartida ----------
+function loadItemsFromUrlOrStorage() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const encoded = params.get("playlist");
+    if (encoded) {
+      const json = decodeURIComponent(escape(atob(decodeURIComponent(encoded))));
+      const parsed = JSON.parse(json);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn("No se pudo leer la playlist del link:", e);
+  }
+  return [
+    {
+      id: "demo1",
+      name: "tv_Show video",
+      url: "https://www.dropbox.com/scl/fi/4zbtcy2zdg1upztjvw9ty/tv_Sjow.mp4?rlkey=fz4swcg4iul7kqlq0jdt7rajk&st=15889gl1&dl=1",
+      tag: "videos",
+      type: "video",
+      createdAt: Date.now() - 3000,
+    },
+  ];
+}
+
+function saveItems() {
+  // Versión demo: en memoria únicamente, no persiste al recargar.
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ---------- Detección de tipo ----------
+function cleanPath(url) {
+  try { return new URL(url).pathname.toLowerCase(); }
+  catch { return url.split("?")[0].toLowerCase(); }
+}
+function detectType(url) {
+  const path = cleanPath(url);
+  const videoExt = [".mp4", ".webm", ".mov", ".mkv", ".avi", ".m4v", ".ogv"];
+  const imageExt = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".avif"];
+  if (videoExt.some((ext) => path.endsWith(ext))) return "video";
+  if (imageExt.some((ext) => path.endsWith(ext))) return "image";
+  return "other";
+}
+function typeLabel(type) {
+  return { video: "🎬 Video", image: "🖼️ Imagen", other: "📄 Otro" }[type] || "📄 Otro";
+}
+function normalizePreviewUrl(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("dropbox.com")) { u.searchParams.set("dl", "1"); return u.toString(); }
+    return url;
+  } catch { return url; }
+}
+
+// ---------- Lista filtrada visible (misma base que usa el reproductor) ----------
+function getVisibleItems() {
+  const term = IS_PLAYER_ONLY ? "" : searchInput.value.trim().toLowerCase();
+  const filter = IS_PLAYER_ONLY ? "all" : currentFilter;
+  return items.filter((it) => {
+    const matchesType = filter === "all" || it.type === filter;
+    const matchesTerm =
+      !term ||
+      it.name.toLowerCase().includes(term) ||
+      it.url.toLowerCase().includes(term) ||
+      (it.tag || "").toLowerCase().includes(term);
+    return matchesType && matchesTerm;
+  }).sort((a, b) => a.createdAt - b.createdAt); // orden de subida, para reproducción secuencial
+}
+
+// ================= REPRODUCTOR =================
+function renderPlayer() {
+  const visible = getVisibleItems();
+  stopImageTimer();
+
+  if (visible.length === 0) {
+    playerStage.innerHTML = `
+      <div class="player-placeholder">
+        <span class="thumb-icon">🎞️</span>
+        <p>Agrega una URL abajo para empezar a reproducir</p>
+      </div>`;
+    playerTitle.textContent = "—";
+    playerTag.textContent = "";
+    playerCounter.textContent = "0 / 0";
+    dotsRow.innerHTML = "";
+    filmstrip.innerHTML = "";
+    return;
+  }
+
+  if (currentIndex >= visible.length) currentIndex = 0;
+  if (currentIndex < 0) currentIndex = visible.length - 1;
+
+  const item = visible[currentIndex];
+  const previewUrl = normalizePreviewUrl(item.url);
+
+  if (item.type === "video") {
+    playerStage.innerHTML = `<video id="mainVideo" src="${escapeHtml(previewUrl)}" controls autoplay playsinline></video>`;
+    const video = document.getElementById("mainVideo");
+    video.addEventListener("ended", () => {
+      if (autoplayCheck.checked) goTo(currentIndex + 1);
+    });
+    video.addEventListener("play", () => setPlayingUi(true));
+    video.addEventListener("pause", () => setPlayingUi(false));
+    setPlayingUi(true);
+  } else if (item.type === "image") {
+    playerStage.innerHTML = `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(item.name)}" />`;
+    setPlayingUi(isPlaying);
+    if (isPlaying && autoplayCheck.checked) startImageTimer();
+  } else {
+    playerStage.innerHTML = `
+      <div class="player-other">
+        📄
+        <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">Abrir enlace</a>
+      </div>`;
+    setPlayingUi(false);
+  }
+
+  playerTitle.textContent = item.name;
+  playerTag.textContent = item.tag || "";
+  playerCounter.textContent = `${currentIndex + 1} / ${visible.length}`;
+
+  renderDots(visible);
+  if (IS_PLAYER_ONLY) renderFilmstrip(visible);
+
+  // Resalta el item activo en la lista de gestión (si está visible)
+  document.querySelectorAll(".url-item").forEach((el) => el.classList.remove("playing"));
+  const activeEl = document.querySelector(`.url-item[data-id="${item.id}"]`);
+  if (activeEl) activeEl.classList.add("playing");
+}
+
+function renderDots(visible) {
+  if (visible.length > 30) { dotsRow.innerHTML = ""; return; } // evita saturar con playlists enormes
+  dotsRow.innerHTML = "";
+  visible.forEach((it, idx) => {
+    const dot = document.createElement("span");
+    dot.className = "dot" + (idx === currentIndex ? " active" : "");
+    dot.title = it.name;
+    dot.addEventListener("click", () => goTo(idx));
+    dotsRow.appendChild(dot);
+  });
+}
+
+function renderFilmstrip(visible) {
+  filmstrip.innerHTML = "";
+  visible.forEach((it, idx) => {
+    const previewUrl = normalizePreviewUrl(it.url);
+    const cell = document.createElement("div");
+    cell.className = "filmstrip-item" + (idx === currentIndex ? " active" : "");
+    cell.title = it.name;
+    if (it.type === "image") {
+      cell.innerHTML = `<img src="${escapeHtml(previewUrl)}" loading="lazy" alt="" />`;
+    } else if (it.type === "video") {
+      cell.innerHTML = `<video src="${escapeHtml(previewUrl)}#t=0.5" muted preload="metadata"></video>`;
+    } else {
+      cell.innerHTML = `<span class="thumb-icon">📄</span>`;
+    }
+    cell.addEventListener("click", () => goTo(idx));
+    filmstrip.appendChild(cell);
+  });
+}
+
+function setPlayingUi(playing) {
+  isPlaying = playing;
+  playPauseBtn.textContent = playing ? "⏸" : "▶";
+}
+
+function startImageTimer() {
+  stopImageTimer();
+  imageTimer = setTimeout(() => goTo(currentIndex + 1), 4000);
+}
+function stopImageTimer() {
+  if (imageTimer) { clearTimeout(imageTimer); imageTimer = null; }
+}
+
+function goTo(index) {
+  const visible = getVisibleItems();
+  if (visible.length === 0) return;
+  currentIndex = (index + visible.length) % visible.length;
+  renderPlayer();
+}
+
+prevBtn.addEventListener("click", () => goTo(currentIndex - 1));
+nextBtn.addEventListener("click", () => goTo(currentIndex + 1));
+
+playPauseBtn.addEventListener("click", () => {
+  const video = document.getElementById("mainVideo");
+  if (video) {
+    video.paused ? video.play() : video.pause();
+  } else {
+    setPlayingUi(!isPlaying);
+    if (isPlaying) startImageTimer(); else stopImageTimer();
+  }
+});
+
+autoplayCheck.addEventListener("change", () => {
+  if (isPlaying && autoplayCheck.checked) startImageTimer();
+  else stopImageTimer();
+});
+
+fullscreenBtn.addEventListener("click", () => {
+  const stage = document.getElementById("playerStage");
+  if (!document.fullscreenElement) {
+    stage.requestFullscreen?.().catch(() => {});
+  } else {
+    document.exitFullscreen?.();
+  }
+});
+
+// ================= LISTA / GESTIÓN =================
+function updateCounts() {
+  document.getElementById("countAll").textContent = items.length;
+  document.getElementById("countVideo").textContent = items.filter((i) => i.type === "video").length;
+  document.getElementById("countImage").textContent = items.filter((i) => i.type === "image").length;
+  document.getElementById("countOther").textContent = items.filter((i) => i.type === "other").length;
+}
+
+function render() {
+  if (IS_PLAYER_ONLY) { renderPlayer(); return; }
+
+  updateCounts();
+  const visible = getVisibleItems();
+
+  listEl.innerHTML = "";
+
+  if (items.length === 0) {
+    emptyState.classList.remove("hidden");
+  } else {
+    emptyState.classList.add("hidden");
+  }
+
+  if (items.length > 0 && visible.length === 0) {
+    listEl.innerHTML = `<li class="empty-state">No se encontraron resultados.</li>`;
+  }
+
+  const displayOrder = [...visible].sort((a, b) => b.createdAt - a.createdAt);
+
+  for (const item of displayOrder) {
+    const li = document.createElement("li");
+    li.className = "url-item";
+    li.dataset.id = item.id;
+
+    const previewUrl = normalizePreviewUrl(item.url);
+    let thumbHtml = "";
+    if (item.type === "image") {
+      thumbHtml = `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'thumb-icon',textContent:'🖼️'}))" />`;
+    } else if (item.type === "video") {
+      thumbHtml = `<video src="${escapeHtml(previewUrl)}#t=0.5" muted preload="metadata"></video><span class="play-badge">▶️</span>`;
+    } else {
+      thumbHtml = `<span class="thumb-icon">📄</span>`;
+    }
+
+    li.innerHTML = `
+      <div class="url-item-inner" data-action="play" data-id="${item.id}">
+        <div class="url-thumb">${thumbHtml}</div>
+        <div class="url-info">
+          ${item.tag ? `<span class="url-tag">${escapeHtml(item.tag)}</span>` : ""}
+          <span class="type-badge">${typeLabel(item.type)}</span>
+          <p class="url-name">${escapeHtml(item.name)}</p>
+          <a class="url-link" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">${escapeHtml(item.url)}</a>
+        </div>
+      </div>
+      <div class="url-actions">
+        <button class="btn btn-outline btn-small" data-action="copy" data-id="${item.id}">📋</button>
+        <button class="btn btn-secondary btn-small" data-action="edit" data-id="${item.id}">✏️</button>
+        <button class="btn btn-danger btn-small" data-action="delete" data-id="${item.id}">🗑️</button>
+      </div>
+    `;
+    listEl.appendChild(li);
+  }
+
+  renderPlayer();
+}
+
+if (!IS_PLAYER_ONLY) {
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const name = nameInput.value.trim();
+    const url = urlInput.value.trim();
+    const tag = tagInput.value.trim();
+    const editId = editIdInput.value;
+    const selectedType = typeInput.value;
+    const type = selectedType === "auto" ? detectType(url) : selectedType;
+
+    if (!name || !url) return;
+
+    if (editId) {
+      const idx = items.findIndex((it) => it.id === editId);
+      if (idx !== -1) items[idx] = { ...items[idx], name, url, tag, type };
+      exitEditMode();
+    } else {
+      items.push({ id: uid(), name, url, tag, type, createdAt: Date.now() });
+    }
+
+    saveItems();
+    render();
+    form.reset();
+  });
+
+  listEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-action]");
+    const playArea = e.target.closest("[data-action='play']");
+
+    if (btn) {
+      const id = btn.dataset.id;
+      const action = btn.dataset.action;
+      const item = items.find((it) => it.id === id);
+      if (!item) return;
+
+      if (action === "delete") {
+        if (confirm(`¿Eliminar "${item.name}"? Esta acción no se puede deshacer.`)) {
+          items = items.filter((it) => it.id !== id);
+          saveItems();
+          render();
+        }
+        return;
+      }
+      if (action === "edit") { enterEditMode(item); return; }
+      if (action === "copy") {
+        navigator.clipboard.writeText(item.url).then(() => {
+          const original = btn.textContent;
+          btn.textContent = "✅";
+          setTimeout(() => (btn.textContent = original), 1200);
+        }).catch(() => alert("No se pudo copiar el enlace."));
+        return;
+      }
+    }
+
+    if (playArea) {
+      const id = playArea.dataset.id;
+      const visible = getVisibleItems();
+      const idx = visible.findIndex((it) => it.id === id);
+      if (idx !== -1) { currentIndex = idx; renderPlayer(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    }
+  });
+
+  function enterEditMode(item) {
+    editIdInput.value = item.id;
+    nameInput.value = item.name;
+    urlInput.value = item.url;
+    tagInput.value = item.tag || "";
+    typeInput.value = item.type || "auto";
+    submitBtn.textContent = "💾 Guardar cambios";
+    cancelEditBtn.classList.remove("hidden");
+    nameInput.focus();
+  }
+
+  function exitEditMode() {
+    editIdInput.value = "";
+    submitBtn.textContent = "➕ Agregar a la playlist";
+    cancelEditBtn.classList.add("hidden");
+    form.reset();
+  }
+  cancelEditBtn.addEventListener("click", exitEditMode);
+
+  filterChips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      filterChips.forEach((c) => c.classList.remove("active"));
+      chip.classList.add("active");
+      currentFilter = chip.dataset.filter;
+      currentIndex = 0;
+      render();
+    });
+  });
+
+  searchInput.addEventListener("input", () => { currentIndex = 0; render(); });
+
+  exportBtn.addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "urls.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  importInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!Array.isArray(parsed)) throw new Error("Formato inválido");
+        const incoming = parsed.filter((p) => p && p.name && p.url).map((p) => ({
+          id: p.id || uid(), name: p.name, url: p.url, tag: p.tag || "",
+          type: p.type || detectType(p.url), createdAt: p.createdAt || Date.now(),
+        }));
+        items = [...items, ...incoming];
+        saveItems();
+        render();
+        alert(`Se importaron ${incoming.length} URL(s).`);
+      } catch (err) { alert("El archivo no tiene un formato JSON válido."); }
+      importInput.value = "";
+    };
+    reader.readAsText(file);
+  });
+
+  // ================= COMPARTIR (link SOLO del reproductor) =================
+  shareBtn.addEventListener("click", () => {
+    if (items.length === 0) {
+      alert("Agrega al menos una URL antes de compartir.");
+      return;
+    }
+    const json = JSON.stringify(items);
+    const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
+    const url = new URL(window.location.href);
+    url.search = `?view=player&playlist=${encoded}`;
+    const finalUrl = url.toString();
+
+    shareLinkInput.value = finalUrl;
+    shareResult.classList.remove("hidden");
+
+    if (finalUrl.length > 7500) {
+      alert("Advertencia: la playlist es muy grande y el link podría no funcionar en algunos navegadores. Considera exportar el JSON en vez de compartir el link, o usar menos URLs por link.");
+    }
+  });
+
+  copyLinkBtn.addEventListener("click", () => {
+    shareLinkInput.select();
+    navigator.clipboard.writeText(shareLinkInput.value).then(() => {
+      const original = copyLinkBtn.textContent;
+      copyLinkBtn.textContent = "✅ Copiado";
+      setTimeout(() => (copyLinkBtn.textContent = original), 1500);
+    }).catch(() => alert("No se pudo copiar. Selecciona el texto y copia manualmente."));
+  });
+}
+
+// ---------- Inicial ----------
+render();
+
+</script>
+</body>
+</html>
